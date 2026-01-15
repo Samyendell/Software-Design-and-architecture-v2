@@ -1,30 +1,46 @@
 package uk.ac.mmu.game.applicationcode.domainmodel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import uk.ac.mmu.game.applicationcode.domainmodel.player.PlayerColour;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Value Object: Complete record of a finished game.
- * Used for persistence and replay.
+ * GameRecord with Jackson annotations for JSON serialization.
  */
 public class GameRecord {
-  private final GameId gameId;
-  private final GameConfiguration configuration;
-  private final PlayerColour winner;
-  private final int winnerTurns;
-  private final int totalTurns;
+    private final GameId gameId;
+    private final GameConfiguration configuration;
+    private final List<Integer> diceSequence;
+    private final PlayerColour winner;
+    private final int winnerTurns;
+    private final int totalTurns;
+    private final long timestamp;
 
-  public GameRecord(GameId gameId, GameConfiguration configuration,
-                   PlayerColour winner, int winnerTurns, int totalTurns) {
-    this.gameId = gameId;
-    this.configuration = configuration;
-    this.winner = winner;
-    this.winnerTurns = winnerTurns;
-    this.totalTurns = totalTurns;
-  }
+    @JsonCreator  // Jackson: Use this constructor when deserializing
+    public GameRecord(
+            @JsonProperty("gameId") GameId gameId,
+            @JsonProperty("configuration") GameConfiguration configuration,
+            @JsonProperty("diceSequence") List<Integer> diceSequence,
+            @JsonProperty("winner") PlayerColour winner,
+            @JsonProperty("winnerTurns") int winnerTurns,
+            @JsonProperty("totalTurns") int totalTurns) {
+        this.gameId = gameId;
+        this.configuration = configuration;
+        this.diceSequence = new ArrayList<>(diceSequence);
+        this.winner = winner;
+        this.winnerTurns = winnerTurns;
+        this.totalTurns = totalTurns;
+        this.timestamp = System.currentTimeMillis();
+    }
 
-  public GameId getGameId() { return gameId; }
-  public GameConfiguration getConfiguration() { return configuration; }
-  public PlayerColour getWinner() { return winner; }
-  public int getWinnerTurns() { return winnerTurns; }
-  public int getTotalTurns() { return totalTurns; }
+    // Jackson will use these getters for serialization
+    public GameId getGameId() { return gameId; }
+    public GameConfiguration getConfiguration() { return configuration; }
+    public List<Integer> getDiceSequence() { return new ArrayList<>(diceSequence); }
+    public PlayerColour getWinner() { return winner; }
+    public int getWinnerTurns() { return winnerTurns; }
+    public int getTotalTurns() { return totalTurns; }
+    public long getTimestamp() { return timestamp; }
 }

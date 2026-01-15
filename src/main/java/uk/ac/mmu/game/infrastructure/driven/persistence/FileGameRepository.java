@@ -2,36 +2,32 @@ package uk.ac.mmu.game.infrastructure.driven.persistence;
 
 import uk.ac.mmu.game.applicationcode.domainmodel.GameId;
 import uk.ac.mmu.game.applicationcode.domainmodel.GameRecord;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 
-/**
- * In-memory implementation of game repository.
- * For production, this would write to files or database.
- */
 public class FileGameRepository implements GameRepository {
-  private final Map<GameId, GameRecord> games;
+  private final PersistenceStrategy strategy;
 
-  public FileGameRepository() {
-    this.games = new HashMap<>();
+  public FileGameRepository(PersistenceStrategy strategy) {
+    this.strategy = strategy;
   }
 
   @Override
   public void save(GameRecord record) {
-    games.put(record.getGameId(), record);
+    strategy.save(record);
   }
 
   @Override
   public Optional<GameRecord> findById(GameId id) {
-    return Optional.ofNullable(games.get(id));
+    return strategy.findById(id);
   }
 
-  public int size() {
-    return games.size();
+  @Override
+  public List<GameId> listAllGameIds() {
+    return strategy.listAll();
   }
 
-  public void clear() {
-    games.clear();
+  public String getStrategyName() {
+    return strategy.getStrategyName();
   }
 }

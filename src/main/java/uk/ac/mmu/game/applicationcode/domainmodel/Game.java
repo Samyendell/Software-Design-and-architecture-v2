@@ -13,238 +13,171 @@ import uk.ac.mmu.game.applicationcode.domainmodel.states.ReadyState;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Game - Aggregate Root.
- * 
- * Orchestrates all game components using multiple design patterns:
- * - State Pattern: Manages game lifecycle
- * - Observer Pattern: Notifies observers of events
- * - Strategy Pattern: Delegates to pluggable rules
- * 
- * Responsibilities:
- * - Maintains game state and player turn order
- * - Enforces game rules through strategy objects
- * - Publishes events to observers
- * - Ensures invariants are maintained
- */
 public class Game {
-  private final GameId id;
-  private final GameConfiguration configuration;
-  private final Board board;
-  private final List<Player> players;
-  private final EndRule endRule;
-  private final HitRule hitRule;
-  private final List<GameObserver> observers;
-  
-  private GameState currentState;
-  private int currentPlayerIndex;
-  private int totalTurns;
-  private Player winner;
+    private final GameId id;
+    private final GameConfiguration configuration;
+    private final Board board;
+    private final List<Player> players;
+    private final EndRule endRule;
+    private final HitRule hitRule;
+    private final List<GameObserver> observers;
 
-  public Game(GameId id, GameConfiguration configuration, Board board,
-              List<Player> players, EndRule endRule, HitRule hitRule) {
-    this.id = id;
-    this.configuration = configuration;
-    this.board = board;
-    this.players = new ArrayList<>(players);
-    this.endRule = endRule;
-    this.hitRule = hitRule;
-    this.observers = new ArrayList<>();
-    this.currentState = ReadyState.getInstance();
-    this.currentPlayerIndex = 0;
-    this.totalTurns = 0;
-    this.winner = null;
+    private GameState currentState;
+    private int currentPlayerIndex;
+    private int totalTurns;
+    private Player winner;
 
-    // Initialize board occupancy
-    board.updateOccupancy(players);
-  }
+    public Game(GameId id, GameConfiguration configuration, Board board,
+                List<Player> players, EndRule endRule, HitRule hitRule) {
+        this.id = id;
+        this.configuration = configuration;
+        this.board = board;
+        this.players = new ArrayList<>(players);
+        this.endRule = endRule;
+        this.hitRule = hitRule;
+        this.observers = new ArrayList<>();
+        this.currentState = ReadyState.getInstance();
+        this.currentPlayerIndex = 0;
+        this.totalTurns = 0;
+        this.winner = null;
 
-  // ============================================
-  // PUBLIC API
-  // ============================================
-
-  /**
-   * Process a dice roll for the current player.
-   * Delegates to current state.
-   */
-  public void takeTurn(int diceRoll) {
-    currentState.takeTurn(this, diceRoll);
-  }
-
-  /**
-   * Register an observer to receive game events.
-   */
-  public void addObserver(GameObserver observer) {
-    observers.add(observer);
-  }
-
-  /**
-   * Remove an observer.
-   */
-  public void removeObserver(GameObserver observer) {
-    observers.remove(observer);
-  }
-
-  // ============================================
-  // STATE TRANSITIONS
-  // ============================================
-
-  /**
-   * Transition to a new state.
-   * Notifies observers of the transition.
-   */
-  public void transitionToState(GameState newState) {
-    String oldStateName = currentState.getStateName();
-    this.currentState = newState;
-    notifyObservers(new StateTransitionEvent(oldStateName, 
-                                             newState.getStateName()));
-  }
-
-  // ============================================
-  // TURN PROCESSING (called by InPlayState)
-  // ============================================
-
-  /**
-   * Process a turn in the InPlay state.
-   * This is the main game logic.
-   */
-  public void processTurn(int diceRoll) {
-    Player currentPlayer = getCurrentPlayer();
-    Position positionBefore = currentPlayer.getCurrentPosition();
-    
-    // Notify turn start
-    notifyObservers(new TurnStartEvent(
-        currentPlayer.getName(),
-        diceRoll,
-        positionBefore,
-        currentPlayer.getTurnCount() + 1
-    ));
-    
-    // Calculate target position
-    Position targetPosition = currentPlayer.getPositionAfterMove(diceRoll);
-    
-    // Check for hit
-    boolean hitAllowed = hitRule.processHit(currentPlayer, targetPosition, board);
-    
-    if (!hitAllowed) {
-      // Hit caused forfeit
-      notifyObservers(new ForfeitEvent(
-          currentPlayer.getName(),
-          ForfeitEvent.ForfeitReason.HIT,
-          targetPosition,
-          currentPlayer.getCurrentPosition()
-      ));
-      incrementTotalTurns();
-      moveToNextPlayer();
-      return;
+        board.updateOccupancy(players);
     }
-    
-    // Notify about hit if it occurred but was allowed
-    if (hitRule instanceof AllowHitRule) {
-      AllowHitRule allowHitRule = (AllowHitRule) hitRule;
-      if (allowHitRule.isHit(targetPosition, board, currentPlayer)) {
-        notifyObservers(new HitEvent(targetPosition));
-      }
+
+    public void takeTurn(int diceRoll) {
+        currentState.takeTurn(this, diceRoll);
     }
-    
-    // Process move according to end rule
-    boolean moved = endRule.processMove(currentPlayer, diceRoll);
-    
-    if (!moved) {
-      // Overshoot caused forfeit
-      notifyObservers(new ForfeitEvent(
-          currentPlayer.getName(),
-          ForfeitEvent.ForfeitReason.OVERSHOOT,
-          targetPosition,
-          currentPlayer.getCurrentPosition()
-      ));
-    } else {
-      // Successful move
-      notifyObservers(new MoveEvent(
-          currentPlayer.getName(),
-          positionBefore,
-          currentPlayer.getCurrentPosition()
-      ));
+
+    public void addObserver(GameObserver observer) {
+        observers.add(observer);
     }
-    
-    // Update board occupancy
-    board.updateOccupancy(players);
-    
-    // Notify turn end
-    notifyObservers(new TurnEndEvent(
-        currentPlayer.getName(),
-        currentPlayer.getTurnCount()
-    ));
-    
-    // Check for win
-    if (currentPlayer.isAtEnd()) {
-      winner = currentPlayer;
-      notifyObservers(new WinEvent(
-          winner.getName(),
-          winner.getTurnCount(),
-          totalTurns + 1
-      ));
-      transitionToState(GameOverState.getInstance());
-      return;
+
+    public void removeObserver(GameObserver observer) {
+        observers.remove(observer);
     }
-    
-    incrementTotalTurns();
-    moveToNextPlayer();
-  }
 
-  /**
-   * Notify observers that game is over.
-   * Called by GameOverState.
-   */
-  public void notifyGameOver() {
-    notifyObservers(new GameOverMessageEvent());
-  }
-
-  // ============================================
-  // HELPER METHODS
-  // ============================================
-
-  private void notifyObservers(GameEvent event) {
-    for (GameObserver observer : observers) {
-      observer.onGameEvent(event);
+    public void transitionToState(GameState newState) {
+        String oldStateName = currentState.getStateName();
+        this.currentState = newState;
+        notifyObservers(new StateTransitionEvent(oldStateName,
+                newState.getStateName()));
     }
-  }
 
-  private void incrementTotalTurns() {
-    totalTurns++;
-  }
+    public void processTurn(int diceRoll) {
+        Player currentPlayer = getCurrentPlayer();
+        Position positionBefore = currentPlayer.getCurrentPosition();
 
-  private void moveToNextPlayer() {
-    currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-  }
+        notifyObservers(new TurnStartEvent(
+                currentPlayer.getName(),
+                diceRoll,
+                positionBefore,
+                currentPlayer.getTurnCount() + 1
+        ));
 
-  // ============================================
-  // GETTERS
-  // ============================================
+        Position targetPosition = currentPlayer.getPositionAfterMove(diceRoll);
 
-  public GameId getId() { return id; }
-  public GameConfiguration getConfiguration() { return configuration; }
-  public Board getBoard() { return board; }
-  public List<Player> getPlayers() { return List.copyOf(players); }
-  public Player getCurrentPlayer() { return players.get(currentPlayerIndex); }
-  public int getTotalTurns() { return totalTurns; }
-  public Player getWinner() { return winner; }
-  public boolean isGameOver() { return winner != null; }
-  public GameState getCurrentState() { return currentState; }
+        boolean hitAllowed = hitRule.processHit(currentPlayer, targetPosition, board);
 
-  /**
-   * Create a record of this game for persistence.
-   */
-  public GameRecord toRecord() {
-    if (winner == null) {
-      throw new IllegalStateException("Cannot create record of unfinished game");
+        if (!hitAllowed) {
+            notifyObservers(new ForfeitEvent(
+                    currentPlayer.getName(),
+                    ForfeitEvent.ForfeitReason.HIT,
+                    targetPosition,
+                    currentPlayer.getCurrentPosition()
+            ));
+            incrementTotalTurns();  // Count the forfeit turn
+            moveToNextPlayer();
+            return;
+        }
+
+        if (hitRule instanceof AllowHitRule) {
+            AllowHitRule allowHitRule = (AllowHitRule) hitRule;
+            if (allowHitRule.isHit(targetPosition, board, currentPlayer)) {
+                notifyObservers(new HitEvent(targetPosition));
+            }
+        }
+
+        boolean moved = endRule.processMove(currentPlayer, diceRoll);
+
+        if (!moved) {
+            notifyObservers(new ForfeitEvent(
+                    currentPlayer.getName(),
+                    ForfeitEvent.ForfeitReason.OVERSHOOT,
+                    targetPosition,
+                    currentPlayer.getCurrentPosition()
+            ));
+        } else {
+            notifyObservers(new MoveEvent(
+                    currentPlayer.getName(),
+                    positionBefore,
+                    currentPlayer.getCurrentPosition()
+            ));
+        }
+
+        board.updateOccupancy(players);
+
+        notifyObservers(new TurnEndEvent(
+                currentPlayer.getName(),
+                currentPlayer.getTurnCount()
+        ));
+
+        // FIXED: Increment total turns BEFORE checking for win
+        // This ensures the winning turn is counted
+        incrementTotalTurns();
+
+        if (currentPlayer.isAtEnd()) {
+            winner = currentPlayer;
+            notifyObservers(new WinEvent(
+                    winner.getName(),
+                    winner.getTurnCount(),
+                    totalTurns  // Now includes the winning turn
+            ));
+            transitionToState(GameOverState.getInstance());
+            return;
+        }
+
+        moveToNextPlayer();
     }
-    return new GameRecord(
-        id,
-        configuration,
-        winner.getColour(),
-        winner.getTurnCount(),
-        totalTurns
-    );
-  }
+
+    public void notifyGameOver() {
+        notifyObservers(new GameOverMessageEvent());
+    }
+
+    private void notifyObservers(GameEvent event) {
+        for (GameObserver observer : observers) {
+            observer.onGameEvent(event);
+        }
+    }
+
+    private void incrementTotalTurns() {
+        totalTurns++;
+    }
+
+    private void moveToNextPlayer() {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+    }
+
+    public GameId getId() { return id; }
+    public GameConfiguration getConfiguration() { return configuration; }
+    public Board getBoard() { return board; }
+    public List<Player> getPlayers() { return List.copyOf(players); }
+    public Player getCurrentPlayer() { return players.get(currentPlayerIndex); }
+    public int getTotalTurns() { return totalTurns; }
+    public Player getWinner() { return winner; }
+    public boolean isGameOver() { return winner != null; }
+    public GameState getCurrentState() { return currentState; }
+
+    public GameRecord toRecord() {
+        if (winner == null) {
+            throw new IllegalStateException("Cannot create record of unfinished game");
+        }
+        return new GameRecord(
+                id,
+                configuration,
+                List.of(),
+                winner.getColour(),
+                winner.getTurnCount(),
+                totalTurns
+        );
+    }
 }

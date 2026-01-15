@@ -4,11 +4,11 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import uk.ac.mmu.game.infrastructure.driven.persistence.GameRepository;
+import uk.ac.mmu.game.infrastructure.driving.ConsoleUI;
 import uk.ac.mmu.game.infrastructure.driving.PlayRunner;
+import uk.ac.mmu.game.applicationcode.usecase.replay.Provided;
 
-/**
- * Main Spring Boot Application.
- */
 @SpringBootApplication
 public class SoftwareProduct {
 
@@ -17,7 +17,9 @@ public class SoftwareProduct {
   }
 
   @Bean
-  public CommandLineRunner run(PlayRunner playRunner) {
+  public CommandLineRunner run(PlayRunner playRunner, 
+                               ConsoleUI consoleUI,
+                               GameRepository repository) {
     return args -> {
       System.out.println();
       System.out.println("╔" + "═".repeat(58) + "╗");
@@ -26,12 +28,24 @@ public class SoftwareProduct {
       System.out.println("╚" + "═".repeat(58) + "╝");
       System.out.println();
 
+      // Show which persistence strategy is being used
+      System.out.println("Using: " + repository.getStrategyName());
+      System.out.println();
+
+      // Run all game scenarios
+      System.out.println("Running game scenarios...");
+      System.out.println();
+      
       playRunner.runAllScenarios();
 
+      System.out.println();
       System.out.println("╔" + "═".repeat(58) + "╗");
       System.out.println("║" + " ".repeat(17) + 
           "ALL SCENARIOS COMPLETE" + " ".repeat(19) + "║");
       System.out.println("╚" + "═".repeat(58) + "╝");
+
+      // Ask if user wants to replay
+      consoleUI.askForReplay();
     };
   }
 }

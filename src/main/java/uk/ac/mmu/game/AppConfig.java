@@ -1,55 +1,73 @@
 package uk.ac.mmu.game;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import uk.ac.mmu.game.applicationcode.domainmodel.events.GameObserver;
-import uk.ac.mmu.game.applicationcode.usecase.play.UseCase as PlayUseCase;
-import uk.ac.mmu.game.applicationcode.usecase.replay.UseCase as ReplayUseCase;
 import uk.ac.mmu.game.infrastructure.driven.output.ConsoleGameObserver;
-import uk.ac.mmu.game.infrastructure.driven.persistence.FileGameRepository;
-import uk.ac.mmu.game.infrastructure.driven.persistence.GameRepository;
+import uk.ac.mmu.game.infrastructure.driven.persistence.*;
+import uk.ac.mmu.game.infrastructure.driving.ConsoleUI;
 import uk.ac.mmu.game.infrastructure.driving.PlayRunner;
-import uk.ac.mmu.game.infrastructure.driving.ReplayRunner;
 
-/**
- * Spring Boot Configuration.
- * Dependency Injection: Wires all components together.
- */
 @Configuration
 public class AppConfig {
 
-  @Bean
-  public GameRepository gameRepository() {
-    return new FileGameRepository();
-  }
+    @Value("${game.persistence.strategy:memory}")
+    private String persistenceStrategy;
 
-  @Bean
-  public ConsoleGameObserver consoleObserver() {
-    return new ConsoleGameObserver();
-  }
+    @Bean
+    public PersistenceStrategy persistenceStrategy() {
+        return switch (persistenceStrategy.toLowerCase()) {
+            case "file", "json" -> {
+                System.out.println("Using JSON FILE persistence strategy");
+                yield new JsonPersistenceStrategy();  // Use Jackson JSON
+            }
+            case "memory" -> {
+                System.out.println("Using IN-MEMORY persistence strategy");
+                yield new InMemoryPersistenceStrategy();
+            }
+            default -> {
+                System.out.println("Unknown strategy '" + persistenceStrategy +
+                        "', defaulting to IN-MEMORY");
+                yield new InMemoryPersistenceStrategy();
+            }
+        };
+    }
 
-  @Bean
-  public PlayUseCase playUseCase(GameRepository repository, 
-                                 ConsoleGameObserver observer) {
-    return new PlayUseCase(
-        repository,
-        () -> observer
-    );
-  }
+    @Bean
+    public GameRepository gameRepository(PersistenceStrategy strategy) {
+        return new FileGameRepository(strategy);
+    }
 
-  @Bean
-  public ReplayUseCase replayUseCase(GameRepository repository) {
-    return new ReplayUseCase(repository);
-  }
+    @Bean
+    public ConsoleGameObserver consoleObserver() {
+        return new ConsoleGameObserver();
+    }
 
-  @Bean
-  public PlayRunner playRunner(PlayUseCase playUseCase, 
-                               ConsoleGameObserver observer) {
-    return new PlayRunner(playUseCase, observer);
-  }
+    @Bean
+    public uk.ac.mmu.game.applicationcode.usecase.play.UseCase playUseCase(
+            GameRepository repository,
+            ConsoleGameObserver observer) {
+        return new uk.ac.mmu.game.applicationcode.usecase.play.UseCase(repository, () -> observer);
+    }
 
-  @Bean
-  public ReplayRunner replayRunner(ReplayUseCase replayUseCase) {
-    return new ReplayRunner(replayUseCase);
-  }
+    @Bean
+    public uk.ac.mmu.game.applicationcode.usecase.replay.UseCase replayUseCase(
+            GameRepository repository,
+            ConsoleGameObserver observer) {
+        return new uk.ac.mmu.game.applicationcode.usecase.replay.UseCase(repository, () -> observer);
+    }
+
+    @Bean
+    public PlayRunner playRunner(
+            uk.ac.mmu.game.applicationcode.usecase.play.UseCase playUseCase,
+            ConsoleGameObserver observer) {
+        return new PlayRunner(playUseCase, observer);
+    }
+
+    @Bean
+    public ConsoleUI consoleUI(
+            GameRepository repository,
+            uk.ac.mmu.game.applicationcode.usecase.replay.UseCase replayUseCase) {
+        return new ConsoleUI(repository, replayUseCase);
+    }
 }
