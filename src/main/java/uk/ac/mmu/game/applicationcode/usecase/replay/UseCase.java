@@ -38,7 +38,7 @@ public class UseCase implements Provided {
     try {
       // Find the saved game
       GameRecord record = repository.findById(request.getGameId())
-          .orElseThrow(() -> new IllegalArgumentException(
+          .orElseThrow(() -> new IllegalArgumentException(  // orElseThrow ????
               "Game not found: " + request.getGameId()));
       
       System.out.println();

@@ -20,7 +20,7 @@ public class FileGameRepository implements GameRepository {
   @Override
   public Optional<GameRecord> findById(GameId id) {
     return strategy.findById(id);
-  }
+  }  // optional ????
 
   @Override
   public List<GameId> listAllGameIds() {

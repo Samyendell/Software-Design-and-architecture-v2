@@ -7,7 +7,7 @@ import uk.ac.mmu.game.applicationcode.domainmodel.player.PlayerColour;
 public class ConsoleGameObserver implements GameObserver {
     private GameConfiguration config;
 
-    public void setConfiguration(GameConfiguration config) {
+    public void setConfiguration(GameConfiguration config) {  // why is this needed? just use constructor
         this.config = config;
         printConfiguration();
     }

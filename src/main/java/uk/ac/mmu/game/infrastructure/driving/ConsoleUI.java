@@ -96,7 +96,7 @@ public class ConsoleUI {
     }
   }
 
-  private void replayGame(GameId gameId) {
+  private void replayGame(GameId gameId) { // should use replay runner
     System.out.println();
     System.out.println("Replaying game: " + gameId.getValue().substring(0, 8) + "...");
     System.out.println();

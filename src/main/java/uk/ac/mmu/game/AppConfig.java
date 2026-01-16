@@ -3,6 +3,7 @@ package uk.ac.mmu.game;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 import uk.ac.mmu.game.infrastructure.driven.output.ConsoleGameObserver;
 import uk.ac.mmu.game.infrastructure.driven.persistence.*;
 import uk.ac.mmu.game.infrastructure.driving.ConsoleUI;
@@ -51,6 +52,7 @@ public class AppConfig {
     }
 
     @Bean
+    @Scope("singleton") // add to all
     public uk.ac.mmu.game.applicationcode.usecase.replay.UseCase replayUseCase(
             GameRepository repository,
             ConsoleGameObserver observer) {

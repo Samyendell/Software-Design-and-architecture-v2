@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import uk.ac.mmu.game.applicationcode.domainmodel.player.PlayerColour;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonAlias;
 
 /**
  * GameConfiguration with Jackson annotations.
