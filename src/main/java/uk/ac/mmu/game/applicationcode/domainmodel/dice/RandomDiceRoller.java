@@ -2,20 +2,15 @@ package uk.ac.mmu.game.applicationcode.domainmodel.dice;
 
 import java.util.Random;
 
-/**
- * Concrete Component: Base dice roller with random number generation.
- */
 public class RandomDiceRoller implements DiceRoller {
-  private final Random random;
-  private final int sides;
+    private final Random random;
 
-  public RandomDiceRoller(int sides) {
-    this.random = new Random();
-    this.sides = sides;
-  }
+    public RandomDiceRoller() {
+        this.random = new Random();
+    }
 
-  @Override
-  public int roll() {
-    return random.nextInt(sides) + 1;
-  }
+    @Override
+    public int roll() {
+        return random.nextInt(6) + 1;
+    }
 }

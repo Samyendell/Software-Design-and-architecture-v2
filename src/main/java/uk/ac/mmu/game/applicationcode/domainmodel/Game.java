@@ -10,6 +10,7 @@ import uk.ac.mmu.game.applicationcode.domainmodel.rules.HitRule;
 import uk.ac.mmu.game.applicationcode.domainmodel.states.GameOverState;
 import uk.ac.mmu.game.applicationcode.domainmodel.states.GameState;
 import uk.ac.mmu.game.applicationcode.domainmodel.states.ReadyState;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,8 +28,8 @@ public class Game {
     private int totalTurns;
     private Player winner;
 
-    public Game(GameId id, GameConfiguration configuration, Board board,
-                List<Player> players, EndRule endRule, HitRule hitRule) {
+    public Game(GameId id, GameConfiguration configuration, Board board, List<Player> players, EndRule endRule,
+                HitRule hitRule) {
         this.id = id;
         this.configuration = configuration;
         this.board = board;
@@ -36,7 +37,7 @@ public class Game {
         this.endRule = endRule;
         this.hitRule = hitRule;
         this.observers = new ArrayList<>();
-        this.currentState = ReadyState.getInstance();
+        this.currentState = new ReadyState();
         this.currentPlayerIndex = 0;
         this.totalTurns = 0;
         this.winner = null;
@@ -52,40 +53,27 @@ public class Game {
         observers.add(observer);
     }
 
-    public void removeObserver(GameObserver observer) {
-        observers.remove(observer);
-    }
-
     public void transitionToState(GameState newState) {
         String oldStateName = currentState.getStateName();
         this.currentState = newState;
-        notifyObservers(new StateTransitionEvent(oldStateName,
-                newState.getStateName()));
+        notifyObservers(new StateTransitionEvent(oldStateName, newState.getStateName()));
     }
 
     public void processTurn(int diceRoll) {
         Player currentPlayer = getCurrentPlayer();
         Position positionBefore = currentPlayer.getCurrentPosition();
 
-        notifyObservers(new TurnStartEvent(
-                currentPlayer.getName(),
-                diceRoll,
-                positionBefore,
-                currentPlayer.getTurnCount() + 1
-        ));
+        notifyObservers(new TurnStartEvent(currentPlayer.getName(), diceRoll,
+                currentPlayer.getTurnCount() + 1));
 
         Position targetPosition = currentPlayer.getPositionAfterMove(diceRoll);
 
         boolean hitAllowed = hitRule.processHit(currentPlayer, targetPosition, board);
 
         if (!hitAllowed) {
-            notifyObservers(new ForfeitEvent(
-                    currentPlayer.getName(),
-                    ForfeitEvent.ForfeitReason.HIT,
-                    targetPosition,
-                    currentPlayer.getCurrentPosition()
-            ));
-            incrementTotalTurns();  // Count the forfeit turn
+            notifyObservers(new ForfeitEvent(currentPlayer.getName(), ForfeitEvent.ForfeitReason.HIT, targetPosition,
+                    currentPlayer.getCurrentPosition()));
+            incrementTotalTurns();
             moveToNextPlayer();
             return;
         }
@@ -100,39 +88,19 @@ public class Game {
         boolean moved = endRule.processMove(currentPlayer, diceRoll);
 
         if (!moved) {
-            notifyObservers(new ForfeitEvent(
-                    currentPlayer.getName(),
-                    ForfeitEvent.ForfeitReason.OVERSHOOT,
-                    targetPosition,
-                    currentPlayer.getCurrentPosition()
-            ));
+            notifyObservers(new ForfeitEvent(currentPlayer.getName(), ForfeitEvent.ForfeitReason.OVERSHOOT,
+                    targetPosition, currentPlayer.getCurrentPosition()));
         } else {
-            notifyObservers(new MoveEvent(
-                    currentPlayer.getName(),
-                    positionBefore,
-                    currentPlayer.getCurrentPosition()
-            ));
+            notifyObservers(new MoveEvent(currentPlayer.getName(), positionBefore, currentPlayer.getCurrentPosition()));
         }
 
         board.updateOccupancy(players);
-
-        notifyObservers(new TurnEndEvent(
-                currentPlayer.getName(),
-                currentPlayer.getTurnCount()
-        ));
-
-        // FIXED: Increment total turns BEFORE checking for win
-        // This ensures the winning turn is counted
         incrementTotalTurns();
 
         if (currentPlayer.isAtEnd()) {
             winner = currentPlayer;
-            notifyObservers(new WinEvent(
-                    winner.getName(),
-                    winner.getTurnCount(),
-                    totalTurns  // Now includes the winning turn
-            ));
-            transitionToState(GameOverState.getInstance());
+            notifyObservers(new WinEvent(winner.getName(), winner.getTurnCount(), totalTurns));
+            transitionToState(new GameOverState());
             return;
         }
 
@@ -157,27 +125,39 @@ public class Game {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     }
 
-    public GameId getId() { return id; }
-    public GameConfiguration getConfiguration() { return configuration; }
-    public Board getBoard() { return board; }
-    public List<Player> getPlayers() { return List.copyOf(players); }
-    public Player getCurrentPlayer() { return players.get(currentPlayerIndex); }
-    public int getTotalTurns() { return totalTurns; }
-    public Player getWinner() { return winner; }
-    public boolean isGameOver() { return winner != null; }
-    public GameState getCurrentState() { return currentState; }
+    public GameId getId() {
+        return id;
+    }
 
-    public GameRecord toRecord() {
-        if (winner == null) {
-            throw new IllegalStateException("Cannot create record of unfinished game");
-        }
-        return new GameRecord(
-                id,
-                configuration,
-                List.of(),
-                winner.getColour(),
-                winner.getTurnCount(),
-                totalTurns
-        );
+    public GameConfiguration getConfiguration() {
+        return configuration;
+    }
+
+    public Board getBoard() {
+        return board;
+    }
+
+    public List<Player> getPlayers() {
+        return List.copyOf(players);
+    }
+
+    public Player getCurrentPlayer() {
+        return players.get(currentPlayerIndex);
+    }
+
+    public int getTotalTurns() {
+        return totalTurns;
+    }
+
+    public Player getWinner() {
+        return winner;
+    }
+
+    public boolean isGameOver() {
+        return winner != null;
+    }
+
+    public GameState getCurrentState() {
+        return currentState;
     }
 }

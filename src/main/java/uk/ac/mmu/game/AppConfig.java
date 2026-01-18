@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
+import uk.ac.mmu.game.applicationcode.domainmodel.events.GameObserver;
 import uk.ac.mmu.game.infrastructure.driven.output.ConsoleGameObserver;
 import uk.ac.mmu.game.infrastructure.driven.persistence.*;
 import uk.ac.mmu.game.infrastructure.driving.ConsoleUI;
@@ -16,60 +17,53 @@ public class AppConfig {
     private String persistenceStrategy;
 
     @Bean
-    public PersistenceStrategy persistenceStrategy() {
+    @Scope("singleton")
+    public GameRepository gameRepository() {
         return switch (persistenceStrategy.toLowerCase()) {
-            case "file", "json" -> {
+            case "json" -> {
                 System.out.println("Using JSON FILE persistence strategy");
-                yield new JsonPersistenceStrategy();  // Use Jackson JSON
+                yield new JsonGameRepository();
             }
             case "memory" -> {
                 System.out.println("Using IN-MEMORY persistence strategy");
-                yield new InMemoryPersistenceStrategy();
+                yield new InMemoryGameRepository();
             }
             default -> {
-                System.out.println("Unknown strategy '" + persistenceStrategy +
-                        "', defaulting to IN-MEMORY");
-                yield new InMemoryPersistenceStrategy();
+                System.out.println("Unknown strategy '" + persistenceStrategy + "', defaulting to IN-MEMORY");
+                yield new InMemoryGameRepository();
             }
         };
     }
 
     @Bean
-    public GameRepository gameRepository(PersistenceStrategy strategy) {
-        return new FileGameRepository(strategy);
-    }
-
-    @Bean
-    public ConsoleGameObserver consoleObserver() {
+    @Scope("singleton")
+    public GameObserver gameObserver() {
         return new ConsoleGameObserver();
     }
 
     @Bean
+    @Scope("singleton")
     public uk.ac.mmu.game.applicationcode.usecase.play.UseCase playUseCase(
-            GameRepository repository,
-            ConsoleGameObserver observer) {
-        return new uk.ac.mmu.game.applicationcode.usecase.play.UseCase(repository, () -> observer);
+            GameRepository repository, GameObserver observer) {
+        return new uk.ac.mmu.game.applicationcode.usecase.play.UseCase(repository, observer);
     }
 
     @Bean
-    @Scope("singleton") // add to all
+    @Scope("singleton")
     public uk.ac.mmu.game.applicationcode.usecase.replay.UseCase replayUseCase(
-            GameRepository repository,
-            ConsoleGameObserver observer) {
-        return new uk.ac.mmu.game.applicationcode.usecase.replay.UseCase(repository, () -> observer);
+            GameRepository repository, GameObserver observer) {
+        return new uk.ac.mmu.game.applicationcode.usecase.replay.UseCase(repository, observer);
     }
 
     @Bean
-    public PlayRunner playRunner(
-            uk.ac.mmu.game.applicationcode.usecase.play.UseCase playUseCase,
-            ConsoleGameObserver observer) {
-        return new PlayRunner(playUseCase, observer);
+    @Scope("singleton")
+    public PlayRunner playRunner(uk.ac.mmu.game.applicationcode.usecase.play.UseCase playUseCase) {
+        return new PlayRunner(playUseCase);
     }
 
     @Bean
-    public ConsoleUI consoleUI(
-            GameRepository repository,
-            uk.ac.mmu.game.applicationcode.usecase.replay.UseCase replayUseCase) {
+    @Scope("singleton")
+    public ConsoleUI consoleUI(GameRepository repository, uk.ac.mmu.game.applicationcode.usecase.replay.UseCase replayUseCase) {
         return new ConsoleUI(repository, replayUseCase);
     }
 }

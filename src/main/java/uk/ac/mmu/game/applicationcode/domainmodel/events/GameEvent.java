@@ -1,32 +1,22 @@
 package uk.ac.mmu.game.applicationcode.domainmodel.events;
 
-/**
- * Base class for all game events.
- * Events are immutable value objects.
- */
 public abstract class GameEvent {
-  private final EventType type;
-  private final long timestamp;
+    private final EventType type;
 
-  protected GameEvent(EventType type) {
-    this.type = type;
-    this.timestamp = System.currentTimeMillis();
-  }
+    protected GameEvent(EventType type) {
+        this.type = type;
+    }
 
-  public EventType getType() { return type; }
-  public long getTimestamp() { return timestamp; }
+    public EventType getType() {
+        return type;
+    }
 
-  public enum EventType {
-    STATE_TRANSITION,
-    TURN_START,
-    TURN_END,
-    MOVE,
-    FORFEIT,
-    HIT,
-    WIN,
-    GAME_OVER_MESSAGE
-  }
+    public enum EventType {
+        STATE_TRANSITION, TURN_START, MOVE, FORFEIT, HIT, WIN, GAME_OVER_MESSAGE
+    }
 
-  @Override
-  public String toString() { return type.name(); }
+    @Override
+    public String toString() {
+        return type.name();
+    }
 }

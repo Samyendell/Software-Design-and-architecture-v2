@@ -2,29 +2,27 @@ package uk.ac.mmu.game.applicationcode.domainmodel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * GameId with Jackson annotations for JSON serialization.
- */
 public class GameId {
     private final String value;
 
     private GameId(String value) {
-        this.value = Objects.requireNonNull(value, "Game ID cannot be null");
+        this.value = Objects.requireNonNull(value, "Game id cannot be null");
     }
 
     public static GameId generate() {
         return new GameId(UUID.randomUUID().toString());
     }
 
-    @JsonCreator  // Jackson: Use this method when deserializing from JSON
+    @JsonCreator
     public static GameId fromString(String value) {
         return new GameId(value);
     }
 
-    @JsonValue  // Jackson: Serialize as just the string value
+    @JsonValue
     public String getValue() {
         return value;
     }

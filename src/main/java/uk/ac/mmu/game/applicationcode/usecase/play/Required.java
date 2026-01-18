@@ -1,25 +1,17 @@
 package uk.ac.mmu.game.applicationcode.usecase.play;
 
 import uk.ac.mmu.game.applicationcode.domainmodel.GameRecord;
-import uk.ac.mmu.game.applicationcode.domainmodel.events.GameObserver;
+import uk.ac.mmu.game.applicationcode.domainmodel.GameId;
 
-/**
- * Ports: What the Play use case requires from infrastructure.
- * Dependency Inversion: Use case defines interfaces, infrastructure implements.
- */
+import java.util.List;
+import java.util.Optional;
+
 public interface Required {
-  
-  /**
-   * Repository for persisting game records.
-   */
-  interface GameRepository {
-    void save(GameRecord record);
-  }
-  
-  /**
-   * Factory for creating observers.
-   */
-  interface ObserverFactory {
-    GameObserver createObserver();
-  }
+    interface GameRepository {
+        void save(GameRecord record);
+
+        Optional<GameRecord> findById(GameId id);
+
+        List<GameId> listAll();
+    }
 }
